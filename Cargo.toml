@@ -135,3 +135,7 @@ strip = "symbols"
 
 [profile.release.package.oxvg_wasm]
 strip = true
+
+[patch.crates-io]
+lightningcss = { git = "https://github.com/parcel-bundler/lightningcss", branch = "master" }
+parcel_selectors = { git = "https://github.com/parcel-bundler/lightningcss", branch = "master" }

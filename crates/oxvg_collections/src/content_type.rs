@@ -449,7 +449,7 @@ impl<'input> ContentType<'_, 'input> {
             match self {
                 Self::StrokeDasharray(ContentTypeRef::RefMut(StrokeDasharray::Values(values))) => {
                     for d in values.iter_mut() {
-                        if let DimensionPercentage::Dimension(l) = d {
+                        if let DimensionPercentage::Dimension(l) = &mut d.0 {
                             f(l);
                         }
                     }
@@ -533,7 +533,7 @@ impl<'input> ContentType<'_, 'input> {
                 }
                 Self::StrokeDasharray(ContentTypeRef::RefMut(StrokeDasharray::Values(values))) => {
                     for d in values.iter_mut() {
-                        if let DimensionPercentage::Percentage(n) = d {
+                        if let DimensionPercentage::Percentage(n) = &mut d.0 {
                             n.0 *= 100.0;
                             f(&mut n.0);
                             n.0 /= 100.0;

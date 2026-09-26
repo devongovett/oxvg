@@ -238,7 +238,7 @@ impl ApplyTransforms {
             get_attribute_mut!(element, StrokeDasharray).as_deref_mut()
         {
             for dash in stroke_dasharray.iter_mut() {
-                *dash = dash.clone().mul(scale);
+                dash.0 = dash.0.clone().mul(scale);
             }
         }
 

@@ -26,6 +26,7 @@ use lightningcss::{
     },
     values::{
         alpha::AlphaValue,
+        number::NonNegative,
         percentage::{DimensionPercentage, Percentage},
         position::{HorizontalPosition, VerticalPosition},
     },
@@ -2721,7 +2722,7 @@ try_from_into_property! {
     StrokeLinejoin(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     StrokeMiterlimit(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     StrokeOpacity(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
-    StrokeWidth(value) => Inheritable::Defined(LengthPercentage(value)) => value.option().ok_or(())?.0,
+    StrokeWidth(value) => Inheritable::Defined(LengthPercentage(value.0)) => NonNegative(value.option().ok_or(())?.0),
     TextDecoration(value, vp) => Inheritable::Defined(value) => value.option().ok_or(())?,
     TextRendering(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     Transform(value, vp) => Inheritable::Defined((&value).try_into()?) => value.option().map(Into::into).ok_or(())?,

@@ -1,16 +1,11 @@
 //! Content types as specified in [SVG 1.1](https://www.w3.org/TR/2011/REC-SVG11-20110816/types.html) and [SVG 2](https://svgwg.org/svg2-draft/propidx.html)
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use lightningcss::{
     declaration::DeclarationBlock,
     properties::svg::SVGPaint,
     stylesheet::ParserOptions,
-    values::{
-        alpha::AlphaValue,
-        color::CssColor,
-        length::LengthValue,
-        number::{CSSInteger, CSSNumber},
-    },
+    values::{alpha::AlphaValue, color::CssColor, length::LengthValue, number::CSSInteger},
 };
 
 pub use lightningcss::{
@@ -173,7 +168,7 @@ impl ToValue for Length {
     {
         match self {
             Self::Number(number) => number.write_value(dest),
-            Self::Length(LengthValue::Px(length)) => length.write_value(dest),
+            Self::Length(LengthValue::Px(length)) => write_number(*length, dest),
             Self::Length(length) => length.write_value(dest),
             Self::Percentage(percentage) => percentage.write_value(dest),
         }
@@ -246,8 +241,14 @@ impl ToValue for Frequency {
 }
 #[test]
 fn frequency() {
-    assert_eq!(Frequency::parse_string(" 10.5Hz "), Ok(Frequency::Hz(10.5)));
-    assert_eq!(Frequency::parse_string(" -1KHz "), Ok(Frequency::KHz(-1.0)));
+    assert_eq!(
+        Frequency::parse_string(" 10.5Hz "),
+        Ok(Frequency::Hz(Number(10.5)))
+    );
+    assert_eq!(
+        Frequency::parse_string(" -1KHz "),
+        Ok(Frequency::KHz(Number(-1.0)))
+    );
 
     assert_eq!(
         Frequency::parse_string("1 Khz"),
@@ -278,10 +279,97 @@ pub type Integer = CSSInteger;
 /// [w3 | SVG 1.1](https://www.w3.org/TR/2011/REC-SVG11-20110816/types.html#DataTypeIRI)
 pub type IRI<'i> = Anything<'i>;
 
+#[cfg(feature = "serialize")]
+/// Writes a number of SVG geometry in the shortest form that reads back as
+/// the same value, as path data is written.
+///
+/// [`Number`] writes itself with it; this is for `f32` fields of other types
+/// (lightningcss lengths, transforms).
+///
+/// Values written through lightningcss are rounded to six significant digits,
+/// the way CSSOM serialises CSS; in geometry that moves things
+/// (`translate(2888.4292 0)` would become `translate(2888.43 0)`). Rounding on
+/// purpose is left to the jobs' precision options, as in SVGO.
+pub(crate) fn write_number<W>(value: f32, dest: &mut Printer<W>) -> Result<(), PrinterError>
+where
+    W: std::fmt::Write,
+{
+    dest.write_str(&oxvg_path::command::short_number(value))
+}
+#[cfg(feature = "serialize")]
+#[test]
+fn write_number_keeps_every_digit() {
+    let number = |text: &str| {
+        let value: f32 = text.parse().unwrap();
+        let mut s = String::new();
+        write_number(
+            value,
+            &mut Printer::new(&mut s, oxvg_serialize::PrinterOptions::default()),
+        )
+        .unwrap();
+        assert_eq!(s.parse::<f32>(), Ok(value), "{text} -> {s}");
+        s
+    };
+    assert_eq!(number("2888.4292"), "2888.4292");
+    assert_eq!(number("-2229.106"), "-2229.106");
+    // More digits than an `f32` holds: the shortest form of the same value
+    assert_eq!(number("4.2333332"), "4.233333");
+    assert_eq!(number("0.21329178"), ".21329178");
+    assert_eq!(number("-0.5"), "-.5");
+    assert_eq!(number("40"), "40");
+    assert_eq!(number("1000"), "1000");
+    assert_eq!(number("2.5e-10"), "2.5e-10");
+}
+
 /// A non-whitespace, non-parenthesis, non-comma value
 pub type Name<'i> = Anything<'i>;
-/// A real number
-pub type Number = CSSNumber;
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
+/// A real number.
+///
+/// As an SVG attribute, a number is defined differently, to allow numbers with large magnitudes to be specified more concisely.
+///
+/// [w3 | SVG 1.1](https://www.w3.org/TR/2011/REC-SVG11-20110816/types.html#DataTypeNumber)
+pub struct Number(pub f32);
+impl Deref for Number {
+    type Target = f32;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for Number {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+#[cfg(feature = "parse")]
+impl<'input> Parse<'input> for Number {
+    fn parse<'t>(input: &mut Parser<'input>) -> Result<Self, Error<'input>> {
+        f32::parse(input).map(Self)
+    }
+}
+#[cfg(feature = "serialize")]
+impl ToValue for Number {
+    fn write_value<W>(&self, dest: &mut Printer<W>) -> Result<(), PrinterError>
+    where
+        W: std::fmt::Write,
+    {
+        write_number(self.0, dest)
+    }
+}
+#[cfg(all(feature = "parse", feature = "serialize"))]
+#[test]
+fn number_keeps_every_digit() {
+    use oxvg_serialize::PrinterOptions;
+    let round_trip = |text| {
+        Number::parse_string(text)
+            .unwrap()
+            .to_value_string(PrinterOptions::default())
+            .unwrap()
+    };
+    assert_eq!(round_trip("0.21329178"), ".21329178");
+    assert_eq!(round_trip("2888.4292"), "2888.4292");
+    assert_eq!(round_trip("-4"), "-4");
+}
 
 #[derive(Clone, Debug, PartialEq)]
 /// A pair of numbers, where the second is optional, separated by a comma or whitespace
@@ -332,23 +420,23 @@ impl ToValue for NumberOptionalNumber {
 fn number_optional_number() {
     assert_eq!(
         NumberOptionalNumber::parse_string("10"),
-        Ok(NumberOptionalNumber(10.0, None))
+        Ok(NumberOptionalNumber(Number(10.0), None))
     );
     assert_eq!(
         NumberOptionalNumber::parse_string("10 -1"),
-        Ok(NumberOptionalNumber(10.0, Some(-1.0)))
+        Ok(NumberOptionalNumber(Number(10.0), Some(Number(-1.0))))
     );
     assert_eq!(
         NumberOptionalNumber::parse_string("10,-1"),
-        Ok(NumberOptionalNumber(10.0, Some(-1.0)))
+        Ok(NumberOptionalNumber(Number(10.0), Some(Number(-1.0))))
     );
     assert_eq!(
         NumberOptionalNumber::parse_string("10 , -1"),
-        Ok(NumberOptionalNumber(10.0, Some(-1.0)))
+        Ok(NumberOptionalNumber(Number(10.0), Some(Number(-1.0))))
     );
     assert_eq!(
         NumberOptionalNumber::parse_string("10, -1"),
-        Ok(NumberOptionalNumber(10.0, Some(-1.0)))
+        Ok(NumberOptionalNumber(Number(10.0), Some(Number(-1.0))))
     );
 
     assert_eq!(

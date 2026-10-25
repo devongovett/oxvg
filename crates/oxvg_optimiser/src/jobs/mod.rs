@@ -115,7 +115,7 @@ macro_rules! jobs {
                                         oxvg_config.apply_transforms = Some(ApplyTransforms {
                                             transform_precision: params.get("transformPrecision")?,
                                             apply_transforms_stroked:
-                                                params.get("applyTransformsStroked")?.unwrap_or_default(),
+                                                params.get("applyTransformsStroked")?.unwrap_or(apply_transforms::default_apply_transforms_stroked()),
                                         });
                                     }
                                 }
@@ -195,7 +195,7 @@ macro_rules! jobs {
                                                     .and_then(|p| serde_json::from_value(p).ok()),
                                                 apply_transforms_stroked: params.remove("applyTransformsStroked")
                                                     .and_then(|p| serde_json::from_value(p).ok())
-                                                    .unwrap_or_default()
+                                                    .unwrap_or(apply_transforms::default_apply_transforms_stroked())
                                             });
                                         }
                                     }
@@ -434,6 +434,9 @@ macro_rules! test_config {
     ($config_json:literal, svg: $svg:literal$(,)?) => {
         $crate::jobs::test_config($config_json, Some($svg))
     };
+    ($config_json:literal, svg: $svg:literal, external_references: [$($id:literal),*]$(,)?) => {
+        $crate::jobs::test_config_with_external_references($config_json, Some($svg), &[$($id),*])
+    };
     ($config_json:literal) => {
         $crate::jobs::test_config($config_json, None)
     };
@@ -441,6 +444,15 @@ macro_rules! test_config {
 
 #[cfg(test)]
 pub(crate) fn test_config(config_json: &str, svg: Option<&'static str>) -> anyhow::Result<String> {
+    test_config_with_external_references(config_json, svg, &[])
+}
+
+#[cfg(test)]
+pub(crate) fn test_config_with_external_references(
+    config_json: &str,
+    svg: Option<&'static str>,
+    external_references: &[&str],
+) -> anyhow::Result<String> {
     use oxvg_ast::{
         parse::roxmltree::{ParsingOptions, parse_with_options},
         serialize::{Node as _, Options, Space},
@@ -458,7 +470,12 @@ pub(crate) fn test_config(config_json: &str, svg: Option<&'static str>) -> anyho
             ..ParsingOptions::default()
         },
         |dom, allocator| {
-            jobs.run(dom, &Info::new(allocator))
+            let mut info = Info::new(allocator);
+            info.external_references = external_references
+                .iter()
+                .map(ToString::to_string)
+                .collect();
+            jobs.run(dom, &info)
                 .map_err(|e| anyhow::Error::msg(format!("{e}")))?;
             Ok(dom.serialize_with_options(Options {
                 trim_whitespace: Space::Default,
@@ -478,4 +495,35 @@ fn test_jobs() -> anyhow::Result<()> {
         None,
     )
     .map(|_| ())
+}
+
+#[test]
+fn large_coordinates_keep_their_digits() -> anyhow::Result<()> {
+    // A map in projected metres: rounding to six significant digits would move it by up to
+    // two units. `5334567.89` is `5334568` as an `f32`.
+    insta::assert_snapshot!(test_config(
+        "{}",
+        Some(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="691234.56 5334567.89 1000 1000">
+    <g transform="translate(691234.56,5334567.89)">
+        <path d="M10 10h980v980H10z" fill="none" stroke="black" stroke-width="3"/>
+    </g>
+</svg>"#
+        )
+    )?);
+    Ok(())
+}
+
+#[test]
+fn numbers_keep_every_digit() -> anyhow::Result<()> {
+    insta::assert_snapshot!(test_config(
+        "{}",
+        Some(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4.2333332 4.2333335">
+    <filter id="a"><feOffset dx="0.21329178" dy="-2229.106"/></filter>
+    <path stroke-miterlimit="2.2360679" pathLength="1234.567" transform="translate(2888.4292,-2229.106)" d="M1 1L5 2.5e-10"/>
+</svg>"#
+        )
+    )?);
+    Ok(())
 }

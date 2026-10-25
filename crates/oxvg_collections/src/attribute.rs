@@ -32,7 +32,7 @@ use lightningcss::{
     },
     vendor_prefix::VendorPrefix,
 };
-use list_of::{ListOf, Semicolon, Separators, Space, SpaceOrComma};
+use list_of::{Comma, ListOf, Semicolon, Separators, Space, SpaceOrComma};
 use path::{Path, Points};
 use presentation::{
     AlignmentBaseline, BaselineShift, Clip, ClipPath, ColorInterpolation, ColorProfile,
@@ -582,7 +582,7 @@ define_attrs! {
     Amplitude(Number) {
         name: "amplitude",
         categories: AttributeGroup::TransferFunction,
-        default: 1.0,
+        default: Number(1.0),
     },
     ArabicForm(ArabicForm) {
         name: "arabic-form",
@@ -823,11 +823,11 @@ define_attrs! {
     },
     Azimuth(Number) {
         name: "azimuth",
-        default: 0.0,
+        default: Number(0.0),
     },
     BaseFrequency(NumberOptionalNumber) {
         name: "baseFrequency",
-        default: NumberOptionalNumber(0.0, None),
+        default: NumberOptionalNumber(Number(0.0), None),
     },
     BaseProfile(Anything<'input>) {
         name: "baseProfile",
@@ -845,7 +845,7 @@ define_attrs! {
     },
     Bias(Number) {
         name: "bias",
-        default: 0.0,
+        default: Number(0.0),
     },
     By(Anything<'input>) {
         name: "by",
@@ -906,11 +906,11 @@ define_attrs! {
     },
     DiffuseConstant(Number) {
         name: "diffuseConstant",
-        default: 1.0,
+        default: Number(1.0),
     },
     Divisor(Number) {
         name: "divisor",
-        default: 1.0,
+        default: Number(1.0),
     },
     Download(Anything<'input>) {
         name: "download",
@@ -925,16 +925,16 @@ define_attrs! {
     },
     DXFeDropShadow(Length) {
         name: "dx",
-        default: Length::Number(2.0),
+        default: Length::Number(Number(2.0)),
     },
     DXFeOffset(Number) {
         name: "dx",
-        default: 0.0,
+        default: Number(0.0),
     },
     DXGlyphRef(Number) {
         name: "dx",
         info: AttributeInfo::DeprecatedUnsafe,
-        default: 0.0,
+        default: Number(0.0),
     },
     DXText(ListOf<Length, SpaceOrComma>) {
         name: "dx",
@@ -948,11 +948,11 @@ define_attrs! {
     },
     DYFeDropShadow(Number) {
         name: "dy",
-        default: 2.0,
+        default: Number(2.0),
     },
     DYFeOffset(Number) {
         name: "dy",
-        default: 0.0,
+        default: Number(0.0),
     },
     DYGlyphRef(ListOf<Length, SpaceOrComma>) {
         name: "dy",
@@ -974,7 +974,7 @@ define_attrs! {
     },
     Elevation(Number) {
         name: "elevation",
-        default: 0.0,
+        default: Number(0.0),
     },
     End(ListOf<BeginEnd<'input>, Semicolon>) {
         name: "end",
@@ -983,7 +983,7 @@ define_attrs! {
     Exponent(Number) {
         name: "exponent",
         categories: AttributeGroup::TransferFunction,
-        default: 1.0,
+        default: Number(1.0),
     },
     ExternalResourcesRequired(TrueFalse) {
         name: "externalResourcesRequired",
@@ -1102,12 +1102,12 @@ define_attrs! {
     HorizOriginX(Number) {
         name: "horiz-origin-x",
         info: AttributeInfo::DeprecatedUnsafe,
-        default: 0.0,
+        default: Number(0.0),
     },
     HorizOriginY(Number) {
         name: "horiz-origin-y",
         info: AttributeInfo::DeprecatedUnsafe,
-        default: 0.0,
+        default: Number(0.0),
     },
     Href(Url<'input>) {
         name: "href",
@@ -1133,7 +1133,7 @@ define_attrs! {
     Intercept(Number) {
         name: "intercept",
         categories: AttributeGroup::TransferFunction,
-        default: 0.0,
+        default: Number(0.0),
     },
     K(Number) {
         name: "k",
@@ -1141,19 +1141,19 @@ define_attrs! {
     },
     K1(Number) {
         name: "k1",
-        default: 0.0,
+        default: Number(0.0),
     },
     K2(Number) {
         name: "k2",
-        default: 0.0,
+        default: Number(0.0),
     },
     K3(Number) {
         name: "k3",
-        default: 0.0,
+        default: Number(0.0),
     },
     K4(Number) {
         name: "k4",
-        default: 0.0,
+        default: Number(0.0),
     },
     KernelMatrix(ListOf<Number, SpaceOrComma>) {
         name: "kernelMatrix",
@@ -1256,7 +1256,7 @@ define_attrs! {
     OffsetFe(Number) {
         name: "offset",
         categories: AttributeGroup::TransferFunction,
-        default: 0.0,
+        default: Number(0.0),
     },
     OffsetHatchPath(NumberPercentage) {
         name: "offset",
@@ -1562,11 +1562,11 @@ define_attrs! {
     },
     Order(NumberOptionalNumber) {
         name: "order",
-        default: NumberOptionalNumber(3.0, None),
+        default: NumberOptionalNumber(Number(3.0), None),
     },
     Orient(Orient) {
         name: "orient",
-        default: Orient::Number(0.0),
+        default: Orient::Number(Number(0.0)),
     },
     Orientation(Orientation) {
         name: "orientation",
@@ -1626,15 +1626,15 @@ define_attrs! {
     },
     PointsAtX(Number) {
         name: "pointsAtX",
-        default: 0.0,
+        default: Number(0.0),
     },
     PointsAtY(Number) {
         name: "pointsAtY",
-        default: 0.0,
+        default: Number(0.0),
     },
     PointsAtZ(Number) {
         name: "pointsAtZ",
-        default: 0.0,
+        default: Number(0.0),
     },
     PreserveAlpha(TrueFalse) {
         name: "preserveAlpha",
@@ -1650,7 +1650,7 @@ define_attrs! {
     },
     Radius(NumberOptionalNumber) {
         name: "radius",
-        default: NumberOptionalNumber(0.0, None),
+        default: NumberOptionalNumber(Number(0.0), None),
     },
     ReferrerPolicy(ReferrerPolicy) {
         name: "referrerpolicy",
@@ -1706,7 +1706,7 @@ define_attrs! {
     },
     RotateAnimate(Rotate) {
         name: "rotate",
-        default: Rotate::Number(0.0),
+        default: Rotate::Number(Number(0.0)),
     },
     RotateHatch(Angle) {
         name: "rotate",
@@ -1728,11 +1728,11 @@ define_attrs! {
     },
     Scale(Number) {
         name: "scale",
-        default: 0.0,
+        default: Number(0.0),
     },
     Seed(Number) {
         name: "seed",
-        default: 0.0,
+        default: Number(0.0),
     },
     Side(TextPathSide) {
         name: "side",
@@ -1741,12 +1741,12 @@ define_attrs! {
     SlopeFont(Number) {
         name: "slope",
         info: AttributeInfo::DeprecatedUnsafe,
-        default: 0.0,
+        default: Number(0.0),
     },
     SlopeFe(Number) {
         name: "slope",
         categories: AttributeGroup::TransferFunction,
-        default: 1.0,
+        default: Number(1.0),
     },
     // https://udn.realityripple.com/docs/Web/SVG/Element/solidColor
     SolidColor(Paint<'input>) {
@@ -1762,11 +1762,11 @@ define_attrs! {
     },
     SpecularConstant(Number) {
         name: "specularConstant",
-        default: 1.0,
+        default: Number(1.0),
     },
     SpecularExponent(Number) {
         name: "specularExponent",
-        default: 1.0,
+        default: Number(1.0),
     },
     SpreadMethod(SpreadMethod) {
         name: "spreadMethod",
@@ -1778,11 +1778,11 @@ define_attrs! {
     },
     StdDeviationFeDropShadow(NumberOptionalNumber) {
         name: "stdDeviation",
-        default: NumberOptionalNumber(2.0, None),
+        default: NumberOptionalNumber(Number(2.0), None),
     },
     StdDeviationFeGaussianBlur(NumberOptionalNumber) {
         name: "stdDeviation",
-        default: NumberOptionalNumber(0.0, None),
+        default: NumberOptionalNumber(Number(0.0), None),
     },
     Stemh(Number) {
         name: "stemh",
@@ -1814,7 +1814,7 @@ define_attrs! {
     },
     SurfaceScale(Number) {
         name: "surfaceScale",
-        default: 1.0,
+        default: Number(1.0),
     },
     SystemLanguage(Anything<'input>) {
         name: "systemLanguage",
@@ -1912,7 +1912,7 @@ define_attrs! {
     UnitsPerEm(Number) {
         name: "units-per-em",
         info: AttributeInfo::DeprecatedUnsafe,
-        default: 1000.0,
+        default: Number(1000.0),
     },
     VAlphabetic(Number) {
         name: "v-alphabetic",
@@ -2018,11 +2018,11 @@ define_attrs! {
     },
     XFePointLight(Number) {
         name: "x",
-        default: 0.0,
+        default: Number(0.0),
     },
     XFeSpotLight(Number) {
         name: "x",
-        default: 0.0,
+        default: Number(0.0),
     },
     XFilter(LengthPercentage) {
         name: "x",
@@ -2157,11 +2157,11 @@ define_attrs! {
     },
     YFePointLight(Number) {
         name: "y",
-        default: 0.0,
+        default: Number(0.0),
     },
     YFeSpotLight(Number) {
         name: "y",
-        default: 0.0,
+        default: Number(0.0),
     },
     YFilter(LengthPercentage) {
         name: "y",
@@ -2220,7 +2220,7 @@ define_attrs! {
     },
     ZFe(Number) {
         name: "z",
-        default: 0.0,
+        default: Number(0.0),
     },
     ZoomAndPan(ZoomAndPan) {
         name: "zoomAndPan",
@@ -2533,7 +2533,7 @@ define_attrs! {
         name: "stroke-miterlimit",
         categories: AttributeGroup::Presentation,
         info: AttributeInfo::Inheritable,
-        default: Inheritable::Defined(4.0),
+        default: Inheritable::Defined(Number(4.0)),
     },
     StrokeOpacity(Inheritable<Opacity>) {
         name: "stroke-opacity",
@@ -2696,7 +2696,7 @@ try_from_into_property! {
     Font(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     FontFamily(value) => Inheritable::Defined(FontFamily(ListOf {
         list: value,
-        separator: SpaceOrComma,
+        separator: Comma,
     })) => value.option().ok_or(())?.0.list,
     FontSize(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     FontStretch(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
@@ -2710,7 +2710,7 @@ try_from_into_property! {
     Marker(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     Mask(value, vp) => Inheritable::Defined(Mask(ListOf {
         list: value.to_vec(),
-        separator: SpaceOrComma,
+        separator: Comma,
     })) => value.option().ok_or(())?.0.list.into(),
     Opacity(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     Overflow(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
@@ -2720,7 +2720,7 @@ try_from_into_property! {
     StrokeDashoffset(value) => Inheritable::Defined(LengthPercentage(value)) => value.option().ok_or(())?.0,
     StrokeLinecap(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     StrokeLinejoin(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
-    StrokeMiterlimit(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
+    StrokeMiterlimit(value) => Inheritable::Defined(Number(value)) => value.option().ok_or(())?.0,
     StrokeOpacity(value) => Inheritable::Defined(value) => value.option().ok_or(())?,
     StrokeWidth(value) => Inheritable::Defined(LengthPercentage(value.0)) => NonNegative(value.option().ok_or(())?.0),
     TextDecoration(value, vp) => Inheritable::Defined(value) => value.option().ok_or(())?,

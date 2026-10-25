@@ -1,9 +1,11 @@
 //! Presentation attributes as specified in [styling](https://svgwg.org/svg2-draft/attindex.html#PresentationAttributes)
 use std::ops::{Deref, DerefMut};
 
+#[cfg(feature = "serialize")]
+use super::core_attrs::write_number;
 use super::{
     core_attrs::{Angle, Anything, Length, Number, Percentage},
-    list_of::{ListOf, SpaceOrComma},
+    list_of::{Comma, ListOf},
 };
 use lightningcss::values::length::LengthValue;
 pub use lightningcss::{
@@ -226,7 +228,12 @@ impl ToValue for Clip {
 fn clip() {
     assert_eq!(
         Clip::parse_string("rect(1, 2, 3, 4)"),
-        Ok(Clip::Shape([1.0, 2.0, 3.0, 4.0]))
+        Ok(Clip::Shape([
+            Number(1.0),
+            Number(2.0),
+            Number(3.0),
+            Number(4.0)
+        ]))
     );
     assert_eq!(Clip::parse_string("auto"), Ok(Clip::Auto));
 
@@ -394,7 +401,12 @@ fn enable_background() {
     );
     assert_eq!(
         EnableBackground::parse_string("new 1 2 3 4"),
-        Ok(EnableBackground::New(Some((1.0, 2.0, 3.0, 4.0))))
+        Ok(EnableBackground::New(Some((
+            Number(1.0),
+            Number(2.0),
+            Number(3.0),
+            Number(4.0)
+        ))))
     );
 
     assert_eq!(
@@ -420,7 +432,7 @@ fn enable_background() {
 ///
 /// [w3 | SVG 1.1](https://www.w3.org/TR/2011/REC-SVG11-20110816/text.html#FontFamilyProperty)
 pub struct FontFamily<'input>(
-    pub ListOf<lightningcss::properties::font::FontFamily<'input>, SpaceOrComma>,
+    pub ListOf<lightningcss::properties::font::FontFamily<'input>, Comma>,
 );
 #[cfg(feature = "parse")]
 impl<'input> Parse<'input> for FontFamily<'input> {
@@ -439,11 +451,33 @@ impl ToValue for FontFamily<'_> {
 }
 #[test]
 fn font_family() {
+    use oxvg_serialize::PrinterOptions;
+
     let value = FontFamily::parse_string(
         r#"'MS Hei',"MS Song",LiSu,隶书,Code2000,'Arial Unicode MS', sans-serif "#,
     )
     .unwrap();
     assert_eq!(value.0.list.len(), 7);
+    assert_eq!(
+        value.to_value_string(PrinterOptions::default()).unwrap(),
+        "MS Hei,MS Song,LiSu,隶书,Code2000,Arial Unicode MS,sans-serif"
+    );
+    let value = FontFamily::parse_string("'Foo' , serif").unwrap();
+    assert_eq!(value.0.list.len(), 2);
+
+    // Escaped commas and quotes belong to the family name
+    let value = FontFamily::parse_string("'Foo, Inc', serif").unwrap();
+    assert_eq!(value.0.list.len(), 2);
+    let printed = value.to_value_string(PrinterOptions::default()).unwrap();
+    assert_eq!(printed, r"Foo\, Inc,serif");
+    let value = FontFamily::parse_string(&printed).unwrap();
+    assert_eq!(value.0.list.len(), 2);
+    assert_eq!(
+        value.to_value_string(PrinterOptions::default()).unwrap(),
+        printed
+    );
+    let value = FontFamily::parse_string(r"'Foo\', Inc', serif").unwrap();
+    assert_eq!(value.0.list.len(), 2);
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -480,7 +514,7 @@ impl ToValue for FontSizeAdjust {
 fn font_size_adjust() {
     assert_eq!(
         FontSizeAdjust::parse_string("10"),
-        Ok(FontSizeAdjust::Number(10.0))
+        Ok(FontSizeAdjust::Number(Number(10.0)))
     );
     assert_eq!(
         FontSizeAdjust::parse_string("none"),
@@ -911,7 +945,7 @@ impl<'input> Parse<'input> for GlyphOrientationHorizontal {
     fn parse<'t>(input: &mut Parser<'input>) -> Result<Self, Error<'input>> {
         input
             .try_parse(|input| input.try_parse(Angle::parse).map(Self))
-            .or_else(|_| Number::parse(input).map(Angle::Deg).map(Self))
+            .or_else(|_| f32::parse(input).map(Angle::Deg).map(Self))
     }
 }
 #[cfg(feature = "serialize")]
@@ -952,12 +986,7 @@ impl<'input> Parse<'input> for GlyphOrientationVertical {
         input
             .try_parse(|input| input.expect_ident_matching("auto").map(|()| Self::Auto))
             .or_else(|_| input.try_parse(Angle::parse).map(Self::Angle))
-            .or_else(|_| {
-                input
-                    .try_parse(Number::parse)
-                    .map(Angle::Deg)
-                    .map(Self::Angle)
-            })
+            .or_else(|_| input.try_parse(f32::parse).map(Angle::Deg).map(Self::Angle))
     }
 }
 #[cfg(feature = "serialize")]
@@ -1073,7 +1102,7 @@ impl ToValue for LengthPercentage {
         ))) = self
         {
             // NOTE: We're omitting length-value unit, since this is allowed in SVG 1.1
-            px.write_value(dest)
+            write_number(*px, dest)
         } else {
             self.0.write_value(dest)
         }
@@ -1117,7 +1146,7 @@ fn length_percentage() {
 ///
 /// [SVG 1.1](https://www.w3.org/TR/2011/REC-SVG11-20110816/masking.html#MaskProperty)
 /// [SVG 2](https://drafts.fxtf.org/css-masking-1/#propdef-mask)
-pub struct Mask<'input>(pub ListOf<lightningcss::properties::masking::Mask<'input>, SpaceOrComma>);
+pub struct Mask<'input>(pub ListOf<lightningcss::properties::masking::Mask<'input>, Comma>);
 #[cfg(feature = "parse")]
 impl<'input> Parse<'input> for Mask<'input> {
     fn parse<'t>(input: &mut Parser<'input>) -> Result<Self, Error<'input>> {
@@ -1132,6 +1161,17 @@ impl ToValue for Mask<'_> {
     {
         self.0.write_value(dest)
     }
+}
+#[test]
+fn mask() {
+    use oxvg_serialize::PrinterOptions;
+
+    let value = Mask::parse_string("url(#a), url(#b)").unwrap();
+    assert_eq!(value.0.list.len(), 2);
+    assert_eq!(
+        value.to_value_string(PrinterOptions::default()).unwrap(),
+        r##"url("#a"),url("#b")"##
+    );
 }
 
 enum_attr!(

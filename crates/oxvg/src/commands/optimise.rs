@@ -1,4 +1,11 @@
-use std::{future, path::PathBuf};
+use std::{
+    future,
+    path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
 use anyhow::anyhow;
 use oxvg_ast::{
@@ -64,7 +71,10 @@ impl Optimise {
     ///
     /// When invalid options are given
     pub fn walk(self, jobs: Jobs) -> anyhow::Result<()> {
+        let error = Arc::new(AtomicBool::new(false));
+        let failed = Arc::clone(&error);
         self.walk.run(move || {
+            let error = Arc::clone(&failed);
             let jobs = jobs.clone();
             let format_options = Options {
                 indent: self.pretty,
@@ -83,8 +93,7 @@ impl Optimise {
                         let input_bytes = source.len() as f64;
                         let info = Info {
                             path: path.cloned(),
-                            multipass_count: 0,
-                            allocator,
+                            ..Info::new(allocator)
                         };
                         jobs.run(dom, &info)
                             .map_err(|e| anyhow::Error::msg(e.to_string()))?;
@@ -102,12 +111,23 @@ impl Optimise {
                     },
                 );
                 match result {
-                    Err(err) => eprintln!("{err}"),
-                    Ok(Err(err)) => eprintln!("{err}"),
+                    Err(err) => {
+                        error.store(true, Ordering::Relaxed);
+                        eprintln!("{err}");
+                    }
+                    Ok(Err(err)) => {
+                        error.store(true, Ordering::Relaxed);
+                        eprintln!("{err}");
+                    }
                     Ok(Ok(())) => {}
                 }
             })
-        })
+        })?;
+        if error.load(Ordering::Relaxed) {
+            Err(anyhow!("Failed to optimise all documents!"))
+        } else {
+            Ok(())
+        }
     }
 
     fn handle_config(&self, config: Config) -> anyhow::Result<Option<Config>> {

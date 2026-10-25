@@ -13,7 +13,9 @@ use oxvg_parse::{Parse, Parser, error::Error};
 #[cfg(feature = "serialize")]
 use oxvg_serialize::{Printer, PrinterOptions, ToValue, error::PrinterError};
 
-use super::core_attrs::{Angle, Number};
+use super::core_attrs::Angle;
+#[cfg(feature = "serialize")]
+use super::core_attrs::write_number;
 
 #[derive(Debug, Clone, PartialEq)]
 /// A transform applied to an element and it's children
@@ -236,7 +238,8 @@ impl SVGTransform {
     fn is_identity(&self) -> bool {
         match self {
             Self::Rotate(n, _, _) | Self::SkewX(n) | Self::SkewY(n) => *n == 0.0,
-            Self::Scale(x, y) | Self::Translate(x, y) => *x == 1.0 && *y == 1.0,
+            Self::Scale(x, y) => *x == 1.0 && *y == 1.0,
+            Self::Translate(x, y) => *x == 0.0 && *y == 0.0,
             Self::Matrix(_) | Self::CssTransform(_) => false,
         }
     }
@@ -360,56 +363,56 @@ impl ToValue for SVGTransform {
         match self {
             SVGTransform::Matrix(Matrix { a, b, c, d, e, f }) => {
                 dest.write_str("matrix(")?;
-                a.write_value(dest)?;
+                write_number(*a, dest)?;
                 dest.write_char(' ')?;
-                b.write_value(dest)?;
+                write_number(*b, dest)?;
                 dest.write_char(' ')?;
-                c.write_value(dest)?;
+                write_number(*c, dest)?;
                 dest.write_char(' ')?;
-                d.write_value(dest)?;
+                write_number(*d, dest)?;
                 dest.write_char(' ')?;
-                e.write_value(dest)?;
+                write_number(*e, dest)?;
                 dest.write_char(' ')?;
-                f.write_value(dest)?;
+                write_number(*f, dest)?;
                 dest.write_char(')')
             }
             SVGTransform::Translate(x, y) => {
                 dest.write_str("translate(")?;
-                x.write_value(dest)?;
+                write_number(*x, dest)?;
                 if *y != 0.0 {
                     dest.write_char(' ')?;
-                    y.write_value(dest)?;
+                    write_number(*y, dest)?;
                 }
                 dest.write_char(')')
             }
             SVGTransform::Scale(x, y) => {
                 dest.write_str("scale(")?;
-                x.write_value(dest)?;
+                write_number(*x, dest)?;
                 if x != y {
                     dest.write_char(' ')?;
-                    y.write_value(dest)?;
+                    write_number(*y, dest)?;
                 }
                 dest.write_char(')')
             }
             SVGTransform::Rotate(angle, x, y) => {
                 dest.write_str("rotate(")?;
-                angle.write_value(dest)?;
+                write_number(*angle, dest)?;
                 if *x != 0.0 || *y != 0.0 {
                     dest.write_char(' ')?;
-                    x.write_value(dest)?;
+                    write_number(*x, dest)?;
                     dest.write_char(' ')?;
-                    y.write_value(dest)?;
+                    write_number(*y, dest)?;
                 }
                 dest.write_char(')')
             }
             SVGTransform::SkewX(angle) => {
                 dest.write_str("skewX(")?;
-                angle.write_value(dest)?;
+                write_number(*angle, dest)?;
                 dest.write_char(')')
             }
             SVGTransform::SkewY(angle) => {
                 dest.write_str("skewY(")?;
-                angle.write_value(dest)?;
+                write_number(*angle, dest)?;
                 dest.write_char(')')
             }
             SVGTransform::CssTransform(transform) => transform.write_value(dest),
@@ -559,7 +562,7 @@ impl SVGTransformList {
     }
 
     /// Converts the transform to a 3D matrix.
-    pub fn to_matrix(&self) -> Option<Matrix3d<Number>> {
+    pub fn to_matrix(&self) -> Option<Matrix3d<f32>> {
         let mut matrix = Matrix3d::identity();
         for transform in &self.0 {
             let transform = if let SVGTransform::Rotate(angle, 0.0, 0.0) = transform {
@@ -573,7 +576,7 @@ impl SVGTransformList {
     }
 
     /// Attempts to convert the matrix to 2D.
-    pub fn to_matrix_2d(&self) -> Option<Matrix<Number>> {
+    pub fn to_matrix_2d(&self) -> Option<Matrix<f32>> {
         self.to_matrix().and_then(|m| m.to_matrix2d())
     }
 }
@@ -679,6 +682,42 @@ fn matrix() {
             e: 30.0,
             f: 40.0
         })]))
+    );
+}
+
+#[test]
+fn is_identity() {
+    assert!(SVGTransform::Translate(0.0, 0.0).is_identity());
+    assert!(!SVGTransform::Translate(1.0, 1.0).is_identity());
+    assert!(SVGTransform::Scale(1.0, 1.0).is_identity());
+    assert!(!SVGTransform::Scale(0.0, 0.0).is_identity());
+}
+
+#[test]
+fn matrix_to_transform_keeps_unit_translate() {
+    let precision = Precision {
+        float: 3,
+        deg: 3,
+        transform: 5,
+    };
+    let matrix = |a, d, e, f| {
+        SVGTransform::Matrix(Matrix {
+            a,
+            b: 0.0,
+            c: 0.0,
+            d,
+            e,
+            f,
+        })
+    };
+    assert_eq!(
+        matrix(1.0, 1.0, 1.0, 1.0).matrix_to_transform(&precision),
+        vec![SVGTransform::Translate(1.0, 1.0)]
+    );
+    // `translate(1 1)scale(2)` is longer than the matrix, so it's kept as is
+    assert_eq!(
+        matrix(2.0, 2.0, 1.0, 1.0).matrix_to_transform(&precision),
+        vec![matrix(2.0, 2.0, 1.0, 1.0)]
     );
 }
 
